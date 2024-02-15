@@ -1,71 +1,98 @@
+/**
+ * Computes the periodical payment necessary to re-pay a given loan.
+ */
+public class LoanCalc {
 
-public class Calendar {
-	// Starting the calendar on 1/1/1900
-	static int dayOfMonth = 1;
-	static int month = 1;
-	static int year = 1900;
-	static int dayOfWeek = 2;
-	static int nDaysInMonth = 31;
+	static double epsilon = 0.001; // The computation tolerance (estimation error)
+	static int iterationCounter; // Monitors the efficiency of the calculation
 
-	public static void main(String args[]) {
+	/**
+	 * Gets the loan data and computes the periodical payment.
+	 * Expects to get three command-line arguments: sum of the loan (double),
+	 * interest rate (double, as a percentage), and number of payments (int).
+	 */
+	public static void main(String[] args) {
+		// Gets the loan data
 
-		int ChosenYear = Integer.parseInt(args[0]);
-		while (year <= ChosenYear) {
-			advance();
-			if (year == ChosenYear) {
-				if (dayOfWeek == 1) {
-					System.out.println(dayOfMonth + "/" + month + "/" + year + " Sunday");
-				} else {
-					System.out.println(dayOfMonth + "/" + month + "/" + year);
-				}
+		double loan = Double.parseDouble(args[0]);
+		double rate = Double.parseDouble(args[1]);
+		int n = Integer.parseInt(args[2]);
+		System.out.println(
+				"Loan sum = " + loan + ", interest rate = " + rate + "%, periods = " + n);
 
-			}
-		}
+		// Computes the periodical payment using brute force search
+		System.out.print("Periodical payment, using brute force: ");
+		System.out.printf("%.2f", bruteForceSolver(loan, rate, n, epsilon));
+		System.out.println();
+		System.out.println("number of iterations: " + iterationCounter);
 
+		// Computes the periodical payment using bisection search
+		System.out.print("Periodical payment, using bi-section search: ");
+		System.out.printf("%.2f", bisectionSolver(loan, rate, n, epsilon));
+		System.out.println();
+		System.out.println("number of iterations: " + iterationCounter);
 	}
 
-	private static void advance() {
-		dayOfMonth++;
-		dayOfWeek++;
-		if (dayOfWeek > 7)
-			dayOfWeek = 1;
-		nDaysInMonth = nDaysInMonth(month, year);
-		if (dayOfMonth > nDaysInMonth) {
-			dayOfMonth = 1;
-			month++;
-			if (month > 12) {
-				month = 1;
-				year++;
-			}
+	/**
+	 * Uses a sequential search method ("brute force") to compute an approximation
+	 * of the periodical payment that will bring the ending balance of a loan close
+	 * to 0.
+	 * Given: the sum of the loan, the periodical interest rate (as a percentage),
+	 * the number of periods (n), and epsilon, a tolerance level.
+	 */
+	// Side effect: modifies the class variable iterationCounter.
+	public static double bruteForceSolver(double loan, double rate, int n, double epsilon) {
+		iterationCounter = 0;
+		double g = loan / n;
+		double increment = epsilon;
+		double balance = endBalance(loan, rate, n, g);
+		while (balance > epsilon) {
+			g = g + increment;
+			balance = endBalance(loan, rate, n, g);
+			iterationCounter++;
 		}
+		return g;
 	}
 
-	private static boolean isLeapYear(int year) {
-		if (year % 4 == 0) {
-			if (year % 100 == 0) {
-				if (year % 400 == 0) {
-					return true;
-				}
-				return false;
+	/**
+	 * Uses bisection search to compute an approximation of the periodical payment
+	 * that will bring the ending balance of a loan close to 0.
+	 * Given: the sum of theloan, the periodical interest rate (as a percentage),
+	 * the number of periods (n), and epsilon, a tolerance level.
+	 */
+	// Side effect: modifies the class variable iterationCounter.
+	public static double bisectionSolver(double loan, double rate, int n, double epsilon) {
+		iterationCounter = 0;
+		double high = loan;
+		double low = loan / n;
+		double g = (high + low) / 2;
+		while (Math.abs(high - low) > epsilon) {
+			g = (low + high) / 2;
+			double balance = endBalance(loan, rate, n, g);
+			if (balance > 0) {
+				low = g;
+			} else {
+				high = g;
 			}
-			return true;
-		} else {
-			return false;
+			iterationCounter++;
+			g = (low + high) / 2;
 		}
+		return g;
 	}
 
-	private static int nDaysInMonth(int month, int year) {
-		if (month == 2) {
-			if (isLeapYear(year)) {
-				return 29;
-			}
-			return 28;
+	/**
+	 * Computes the ending balance of a loan, given the sum of the loan, the
+	 * periodical
+	 * interest rate (as a percentage), the number of periods (n), and the
+	 * periodical payment.
+	 */
+	private static double endBalance(double loan, double rate, int n, double payment) {
+		double balance = loan;
+		while (n > 0) {
+			balance = (balance - payment) * (1 + rate / 100);
+			n--;
 		}
-		if (month == 4 || month == 6 || month == 9 || month == 11) {
-			return 30;
-		} else {
-			return 31;
-		}
-	}
+		return balance;
 
+	}
 }
